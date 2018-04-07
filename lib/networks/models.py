@@ -245,9 +245,13 @@ class dual_graph_vrd(basenet):
         """
         vert_pairs = utils.gather_vec_pairs(vert_factor, self.relations)
 
-        sub_vert, obj_vert = tf.split(split_dim=1, num_split=2, value=vert_pairs)
-        sub_vert_w_input = tf.concat(concat_dim=1, values=[sub_vert, edge_factor])
-        obj_vert_w_input = tf.concat(concat_dim=1, values=[obj_vert, edge_factor])
+        sub_vert, obj_vert = tf.split(value=vert_pairs, num_or_size_splits=2, axis=1)
+        sub_vert_w_input = tf.concat(values=[sub_vert, edge_factor], axis=1)
+        obj_vert_w_input = tf.concat(values=[obj_vert, edge_factor], axis=1)
+
+        #sub_vert, obj_vert = tf.split(split_dim=1, num_split=2, value=vert_pairs)
+        #sub_vert_w_input = tf.concat(concat_dim=1, values=[sub_vert, edge_factor])
+        #obj_vert_w_input = tf.concat(concat_dim=1, values=[obj_vert, edge_factor])
 
         # compute compatibility scores
         (self.feed(sub_vert_w_input)
@@ -260,8 +264,8 @@ class dual_graph_vrd(basenet):
         sub_vert_w = self.get_output('sub_vert_score')
         obj_vert_w = self.get_output('obj_vert_score')
 
-        weighted_sub = tf.mul(sub_vert, sub_vert_w)
-        weighted_obj = tf.mul(obj_vert, obj_vert_w)
+        weighted_sub = tf.multiply(sub_vert, sub_vert_w)
+        weighted_obj = tf.multiply(obj_vert, obj_vert_w)
         return weighted_sub + weighted_obj
 
     def _compute_vert_context_soft(self, edge_factor, vert_factor, reuse=False):
@@ -275,8 +279,10 @@ class dual_graph_vrd(basenet):
         vert_factor_gathered = tf.gather(vert_factor, self.edge_pair_segment_inds)
 
         # concat outgoing edges and ingoing edges with gathered vert_factors
-        out_edge_w_input = tf.concat(concat_dim=1, values=[out_edge, vert_factor_gathered])
-        in_edge_w_input = tf.concat(concat_dim=1, values=[in_edge, vert_factor_gathered])
+        out_edge_w_input = tf.concat(values=[out_edge, vert_factor_gathered], axis=1)
+        in_edge_w_input = tf.concat(values=[in_edge, vert_factor_gathered], axis=1)
+        #out_edge_w_input = tf.concat(concat_dim=1, values=[out_edge, vert_factor_gathered])
+        #in_edge_w_input = tf.concat(concat_dim=1, values=[in_edge, vert_factor_gathered])
 
         # compute compatibility scores
         (self.feed(out_edge_w_input)
@@ -290,8 +296,8 @@ class dual_graph_vrd(basenet):
         in_edge_w = self.get_output('in_edge_score')
 
         # weight the edge factors with computed weigths
-        out_edge_weighted = tf.mul(out_edge, out_edge_w)
-        in_edge_weighted = tf.mul(in_edge, in_edge_w)
+        out_edge_weighted = tf.multiply(out_edge, out_edge_w)
+        in_edge_weighted = tf.multiply(in_edge, in_edge_w)
 
 
         edge_sum = out_edge_weighted + in_edge_weighted

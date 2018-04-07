@@ -19,7 +19,7 @@ import tensorflow as tf
 from utils.cpu_nms import cpu_nms
 import matplotlib.pyplot as plt
 
-import json
+import json #, pickle
 
 
 def draw_graph_pred(im, boxes, cls_score, rel_score, gt_to_pred, roidb):
@@ -105,8 +105,6 @@ def viz_net(net_name, weight_name, imdb, viz_mode='viz_cls'):
               'rel_pair_segment_inds': tf.placeholder(dtype=tf.int32, shape=[None]),
               'n_iter': cfg.TEST.INFERENCE_ITER}
 
-
-
     net = get_network(net_name)(inputs)
     net.setup()
     print ('Loading model weights from {:s}').format(weight_name)
@@ -161,3 +159,95 @@ def viz_net(net_name, weight_name, imdb, viz_mode='viz_cls'):
         gt_to_pred = ground_predictions(sg_entry, roidb[im_i], 0.5)
         draw_graph_pred(im, sg_entry['boxes'], sg_entry['scores'], sg_entry['relations'],
                              gt_to_pred, roidb[im_i])
+
+
+def load_model(net_name, weight_name, num_classes, num_predicates):
+    sess = tf.Session()
+
+    # set up testing mode
+    rois = tf.placeholder(dtype=tf.float32, shape=[None, 5], name='rois')
+    rel_rois = tf.placeholder(dtype=tf.float32, shape=[None, 5], name='rel_rois')
+    ims = tf.placeholder(dtype=tf.float32, shape=[None, None, None, 3], name='ims')
+    relations = tf.placeholder(dtype=tf.int32, shape=[None, 2], name='relations')
+    inputs = {'rois': rois,
+              'rel_rois': rel_rois,
+              'ims': ims,
+              'relations': relations,
+              'num_roi': tf.placeholder(dtype=tf.int32, shape=[]),
+              'num_rel': tf.placeholder(dtype=tf.int32, shape=[]),
+              'num_classes': num_classes,
+              'num_predicates': num_predicates,
+              'rel_mask_inds': tf.placeholder(dtype=tf.int32, shape=[None]),
+              'rel_segment_inds': tf.placeholder(dtype=tf.int32, shape=[None]),
+              'rel_pair_mask_inds': tf.placeholder(dtype=tf.int32, shape=[None, 2]),
+              'rel_pair_segment_inds': tf.placeholder(dtype=tf.int32, shape=[None]),
+              'n_iter': 2}
+
+    net = get_network(net_name)(inputs)
+    net.setup()
+    print ('Loading model weights from {:s}').format(weight_name)
+    saver = tf.train.Saver()
+    saver.restore(sess, weight_name)
+
+    return (sess, net, inputs)
+
+def infer_image(im, box_proposals, relations, sess, net, inputs):
+    if net.iterable:
+        inference_iter = net.n_iter - 1
+    else:
+        inference_iter = 0
+    print('=======================VIZ INFERENCE Iteration = '),
+    print(inference_iter)
+
+    # Do detection to get proposals
+    bbox_reg = False
+
+    out_dict = im_detect(sess, net, inputs, im, box_proposals, relations,
+                                bbox_reg, [inference_iter])
+    #print(out_dict)
+    #out_bytes = pickle.dumps(out_dict)
+    #print out_bytes
+    #sg_entry = out_dict[inference_iter]
+
+    #draw_graph_pred_no_truth(im, sg_entry['boxes'], sg_entry['scores'], sg_entry['relations'])
+    return out_dict, inference_iter
+
+def draw_graph_pred_no_truth(im, boxes, cls_score, rel_score):
+    """
+    Draw a predicted scene graph. To keep the graph interpretable, only draw
+    the node and edge predictions that have correspounding ground truth
+    labels.
+    args:
+        im: image
+        boxes: prediceted boxes
+        cls_score: object classification scores
+        rel_score: relation classification scores
+        gt_to_pred: a mapping from ground truth box indices to predicted box indices
+        idx: for saving
+        roidb: roidb
+    """
+    #gt_relations = roidb['gt_relations']
+    im = im[:, :, (2, 1, 0)].copy()
+    cls_pred = np.argmax(cls_score, 1)
+    rel_pred_mat = np.argmax(rel_score, 2)
+    rel_pred = []
+    all_rels = []
+
+    for i in xrange(rel_pred_mat.shape[0]):
+        for j in xrange(rel_pred_mat.shape[1]):
+            # discard duplicate grounding
+            if [i, j] in all_rels:
+                continue
+            rel_pred.append([i, j, rel_pred_mat[i,j], 1])
+            all_rels.append([i, j])
+
+    rel_pred = np.array(rel_pred)
+    if rel_pred.size == 0:
+        return
+
+    # indices of predicted boxes
+    pred_inds = rel_pred[:, :2].ravel()
+
+    # draw graph predictions
+    graph_dict = draw_scene_graph(cls_pred, pred_inds, rel_pred)
+    viz_scene_graph(im, boxes, cls_pred, pred_inds, rel_pred, preprocess=False)

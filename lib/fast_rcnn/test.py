@@ -107,14 +107,9 @@ def _get_blobs(im, rois):
     blobs['rois'] = _get_rois_blob(rois, im_scale_factors)
     return blobs, im_scale_factors
 
-def im_detect(sess, net, inputs, im, boxes, bbox_reg, multi_iter):
+def im_detect(sess, net, inputs, im, boxes, relations, bbox_reg, multi_iter):
     blobs, im_scales = _get_blobs(im, boxes)
-
-    relations = []
-    for i in range(boxes.shape[0]):
-        for j in range(boxes.shape[0]):
-            if i != j:
-                relations.append([i, j])
+    
     relations = np.array(relations, dtype=np.int32) # all possible combinations
     num_roi = blobs['rois'].shape[0]
     num_rel = relations.shape[0]

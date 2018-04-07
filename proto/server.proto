@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package proto_server;
+
+service Worker {
+    rpc RunTask(Task) returns (Result) {}
+}
+
+message Box {
+    int32 xmin = 1;
+    int32 ymin = 2;
+    int32 xmax = 3;
+    int32 ymax = 4;
+    string label = 5;
+    float confidence = 6;
+    string object_uuid = 7;
+}
+
+message Task {
+    int64 seqId = 1;
+    string app = 2;
+    bytes rawImage = 3;
+    repeated Box bb_list = 4;
+}
+
+message Result {
+    int64 seqId = 1;
+    bytes detect_data = 2;
+    bytes scene_data = 3;
+    int64 execTime = 4;
+}

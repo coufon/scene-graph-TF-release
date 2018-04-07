@@ -38,7 +38,8 @@ def pad_and_gather(vecs, mask_inds, pad=None):
         pad = tf.expand_dims(tf.zeros_like(vecs[0]), 0)
     else:
         pad = tf.expand_dims(pad, 0)
-    vecs_padded = tf.concat(0, [vecs, pad])
+    vecs_padded = tf.concat([vecs, pad], 0)
+    #vecs_padded = tf.concat(0, [vecs, pad])
     # flatten mask and edges
     vecs_gathered = tf.gather(vecs_padded, mask_inds)
     return vecs_gathered
