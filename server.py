@@ -49,8 +49,8 @@ class WorkerServicer(server_pb2.BetaWorkerServicer):
         time.sleep(10)
         (self.sess, self.net, self.inputs) = load_model(NETWORK_NAME, WEIGHT_NAME, NR_CLASSES, NR_PREDICATES)
 
-        saver = tf.train.Saver()
-        saver.save(self.sess, 'model/my_test_model', global_step=1000)
+        #saver = tf.train.Saver()
+        #saver.save(self.sess, 'model/my_test_model', global_step=1000)
 
     def RunTask(self, request, context):
         print 'Recv task {}'.format(request.seqId)
