@@ -159,7 +159,7 @@ __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
 __C.DATA_DIR = osp.abspath(osp.join(__C.ROOT_DIR, 'data'))
 
 
-__C.VG_DIR = osp.abspath(osp.join(__C.ROOT_DIR, 'data/vg/'))
+__C.VG_DIR = './' #osp.abspath(osp.join(__C.ROOT_DIR, 'data/vg/'))
 
 
 # Default GPU device id

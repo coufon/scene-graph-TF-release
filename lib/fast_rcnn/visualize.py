@@ -200,15 +200,11 @@ def infer_image(im, box_proposals, relations, sess, net, inputs):
     print(inference_iter)
 
     # Do detection to get proposals
-    bbox_reg = False
-
+    #bbox_reg = False
     out_dict = im_detect(sess, net, inputs, im, box_proposals, relations,
-                                bbox_reg, [inference_iter])
-    #print(out_dict)
-    #out_bytes = pickle.dumps(out_dict)
-    #print out_bytes
-    #sg_entry = out_dict[inference_iter]
+        False, [inference_iter])
 
+    #sg_entry = out_dict[inference_iter]
     #draw_graph_pred_no_truth(im, sg_entry['boxes'], sg_entry['scores'], sg_entry['relations'])
     return out_dict, inference_iter
 
