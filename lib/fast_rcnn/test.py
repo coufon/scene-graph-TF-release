@@ -4,6 +4,8 @@
 # Written by Danfei Xu
 # --------------------------------------------------------
 
+import cv2
+
 from fast_rcnn.config import cfg
 from fast_rcnn.bbox_transform import clip_boxes, bbox_transform_inv
 from roi_data_layer.roidb import prepare_roidb
@@ -50,8 +52,8 @@ def _get_image_blob(im):
         # Prevent the biggest axis from being more than MAX_SIZE
         if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
             im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
-
-        im = scipy.ndimage.interpolation.zoom(im_orig, (im_scale, im_scale, 1.0), order=1)
+        #im = scipy.ndimage.interpolation.zoom(im_orig, (im_scale, im_scale, 1.0), order=1)
+        im = cv2.resize(im_orig, (int(im_scale*im_shape[1]), int(im_scale*im_shape[0])))
         im_scale_factors.append(im_scale)
         processed_ims.append(im)
 
