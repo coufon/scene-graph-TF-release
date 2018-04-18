@@ -160,10 +160,7 @@ def viz_net(net_name, weight_name, imdb, viz_mode='viz_cls'):
         draw_graph_pred(im, sg_entry['boxes'], sg_entry['scores'], sg_entry['relations'],
                              gt_to_pred, roidb[im_i])
 
-
-def load_model(net_name, weight_name, num_classes, num_predicates):
-    sess = tf.Session()
-
+def load_model(sess, net_name, weight_name, num_classes, num_predicates):
     # set up testing mode
     rois = tf.placeholder(dtype=tf.float32, shape=[None, 5], name='rois')
     rel_rois = tf.placeholder(dtype=tf.float32, shape=[None, 5], name='rel_rois')
@@ -189,15 +186,13 @@ def load_model(net_name, weight_name, num_classes, num_predicates):
     saver = tf.train.Saver()
     saver.restore(sess, weight_name)
 
-    return (sess, net, inputs)
+    return net, inputs
 
 def infer_image(im, box_proposals, relations, sess, net, inputs):
-    if net.iterable:
-        inference_iter = net.n_iter - 1
-    else:
-        inference_iter = 0
-    print('=======================VIZ INFERENCE Iteration = '),
-    print(inference_iter)
+    inference_iter = net.n_iter - 1 if net.iterable else 0
+
+    #print('=======================VIZ INFERENCE Iteration = '),
+    #print(inference_iter)
 
     # Do detection to get proposals
     #bbox_reg = False
