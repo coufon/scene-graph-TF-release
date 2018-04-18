@@ -18,7 +18,7 @@ import tensorflow as tf
 import os
 from utils.blob import im_list_to_blob
 
-import time
+#import time
 
 """
 Test a scene graph generation network
@@ -131,9 +131,9 @@ def im_detect(sess, net, inputs, im, boxes, relations, bbox_reg, multi_iter):
         data_utils.compute_rel_rois(num_rel, blobs['rois'], relations)
 
     # Stage 1: VGG feature extraction.
-    ops_vgg = {
-      'conv_out': net.layers['conv_out'],
-    }
+    #ops_vgg = {
+    #  'conv_out': net.layers['conv_out'],
+    #}
     # Stage 2.
     ops = {
       'bbox_deltas': net.bbox_pred_output(multi_iter),
@@ -141,21 +141,19 @@ def im_detect(sess, net, inputs, im, boxes, relations, bbox_reg, multi_iter):
       'cls_probs': net.cls_pred_output(multi_iter)
     }
 
-    t_start = time.time()
-    ops_vgg_value = sess.run(ops_vgg, feed_dict={
-      inputs['ims']: blobs['data'],
-      net.keep_prob: 1,
-    })
-    print 'VGG takes', time.time() - t_start
+    #t_start = time.time()
+    #ops_vgg_value = sess.run(ops_vgg, feed_dict={
+    #  inputs['ims']: blobs['data'],
+    #  net.keep_prob: 1,
+    #})
+    #print 'VGG takes', time.time() - t_start
 
-    print ops_vgg_value
+    #del feed_dict[inputs['ims']]
+    #feed_dict[ops_vgg['conv_out']] = ops_vgg_value['conv_out']
 
-    del feed_dict[inputs['ims']]
-    feed_dict[ops_vgg['conv_out']] = ops_vgg_value['conv_out']
-
-    t_start = time.time()
+    #t_start = time.time()
     ops_value = sess.run(ops, feed_dict=feed_dict)
-    print 'Scene takes', time.time() - t_start
+    #print 'Scene takes', time.time() - t_start
 
     out_dict = {}
     for mi in multi_iter:
