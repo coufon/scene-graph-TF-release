@@ -321,27 +321,23 @@ def run_single(sess, net, inputs, outputs, im, boxes, relations, bbox_reg, multi
 
     ops_value = sess.run(outputs, feed_dict=feed_dict)
 
-    out_dict = {}
-    for mi in multi_iter:
-        rel_probs_flat = ops_value['rel_probs'][mi]
-        rel_probs = np.zeros([num_roi, num_roi, rel_probs_flat.shape[1]])
-        for i, rel in enumerate(relations):
-            rel_probs[rel[0], rel[1], :] = rel_probs_flat[i, :]
+    mi = multi_iter[-1]
+    rel_probs_flat = ops_value['rel_probs'][mi]
+    rel_probs = np.zeros([num_roi, num_roi, rel_probs_flat.shape[1]])
+    for i, rel in enumerate(relations):
+        rel_probs[rel[0], rel[1], :] = rel_probs_flat[i, :]
 
-        cls_probs = ops_value['cls_probs'][mi]
+    cls_probs = ops_value['cls_probs'][mi]
 
-        if bbox_reg:
-            # Apply bounding-box regression deltas
-            pred_boxes = bbox_transform_inv(boxes, ops_value['bbox_deltas'][mi])
-            pred_boxes = clip_boxes(pred_boxes, im.shape)
-        else:
-            # Simply repeat the boxes, once for each class
-            pred_boxes = np.tile(boxes, (1, cls_probs.shape[1]))
+    if bbox_reg:
+        # Apply bounding-box regression deltas
+        pred_boxes = bbox_transform_inv(boxes, ops_value['bbox_deltas'][mi])
+        pred_boxes = clip_boxes(pred_boxes, im.shape)
+    else:
+        # Simply repeat the boxes, once for each class
+        pred_boxes = np.tile(boxes, (1, cls_probs.shape[1]))
 
-        out_dict[mi] = {'scores': cls_probs,
-                        'boxes': pred_boxes,
-                        'relations': rel_probs}
-    return out_dict
+    return {'scores': cls_probs, 'boxes': pred_boxes, 'relations': rel_probs}
 
 
 def run_batch(sess, net, inputs, outputs, im, boxes, relations, bbox_reg, multi_iter):
