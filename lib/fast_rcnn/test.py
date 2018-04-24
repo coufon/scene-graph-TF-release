@@ -20,7 +20,7 @@ import tensorflow as tf
 import os
 from utils.blob import im_list_to_blob
 
-#import time
+import time
 
 """
 Test a scene graph generation network
@@ -294,3 +294,116 @@ def test_net(net_name, weight_name, imdb, mode, max_per_image=100):
     for mode in eval_modes:
         for iter_n in multi_iter:
             evaluators[mode][iter_n].print_stats()
+
+
+# ---------------------------------------------
+
+def run_single(sess, net, inputs, outputs, im, boxes, relations, bbox_reg, multi_iter):
+    blobs, im_scales = _get_blobs(im, boxes)
+    
+    relations = np.array(relations, dtype=np.int32) # all possible combinations
+    num_roi = blobs['rois'].shape[0]
+    num_rel = relations.shape[0]
+
+    inputs_feed = data_utils.create_graph_data(num_roi, num_rel, relations)
+
+    feed_dict = {inputs['ims']: blobs['data'],
+                 inputs['rois']: blobs['rois'],
+                 inputs['relations']: relations,
+                 net.keep_prob: 1}
+
+    for k in inputs_feed:
+        feed_dict[inputs[k]] = inputs_feed[k]
+
+    # compute relation rois
+    feed_dict[inputs['rel_rois']] = \
+        data_utils.compute_rel_rois(num_rel, blobs['rois'], relations)
+
+    ops_value = sess.run(outputs, feed_dict=feed_dict)
+
+    out_dict = {}
+    for mi in multi_iter:
+        rel_probs_flat = ops_value['rel_probs'][mi]
+        rel_probs = np.zeros([num_roi, num_roi, rel_probs_flat.shape[1]])
+        for i, rel in enumerate(relations):
+            rel_probs[rel[0], rel[1], :] = rel_probs_flat[i, :]
+
+        cls_probs = ops_value['cls_probs'][mi]
+
+        if bbox_reg:
+            # Apply bounding-box regression deltas
+            pred_boxes = bbox_transform_inv(boxes, ops_value['bbox_deltas'][mi])
+            pred_boxes = clip_boxes(pred_boxes, im.shape)
+        else:
+            # Simply repeat the boxes, once for each class
+            pred_boxes = np.tile(boxes, (1, cls_probs.shape[1]))
+
+        out_dict[mi] = {'scores': cls_probs,
+                        'boxes': pred_boxes,
+                        'relations': rel_probs}
+    return out_dict
+
+
+def run_batch(sess, net, inputs, outputs, im, boxes, relations, bbox_reg, multi_iter):
+    batch_size = 2
+    ims = [im]*batch_size
+    batch_boxes = [boxes]*batch_size
+    batch_relations = [relations]*batch_size
+    mi = multi_iter[-1]
+    results = list()
+
+    t_start = time.time()
+    # Convert an image and RoIs within that image into network inputs.
+    im_scaled_list, rois_list = list(), list()
+    for im, boxes in zip(ims, batch_boxes):
+        im_scaled, im_scale_factors = _get_image_blob(im)
+        rois = _get_rois_blob(boxes, im_scale_factors)
+        im_scaled_list.append(im_scaled[0])
+        rois_list.append(rois)
+
+    conv_outs = sess.run(net.layers['conv_out'], feed_dict={
+        inputs['ims']: np.stack(im_scaled_list, axis=0),
+        net.keep_prob: 1,
+    })
+    print 'VGG takes', time.time() - t_start
+
+    t_start = time.time()
+    for i in range(len(rois_list)):
+        conv_out, rois, relations = np.expand_dims(conv_outs[i], axis=0), rois_list[i], batch_relations[i]
+        relations = np.array(relations, dtype=np.int32) # all possible combinations
+        num_roi = rois.shape[0]
+        num_rel = relations.shape[0]
+
+        feed_dict = {net.layers['conv_out']: conv_out,
+                     inputs['rois']: rois,
+                     inputs['relations']: relations,
+                     inputs['rel_rois']: data_utils.compute_rel_rois(num_rel, rois, relations),
+                     net.keep_prob: 1}
+    
+        inputs_feed = data_utils.create_graph_data(num_roi, num_rel, relations)
+        for k in inputs_feed:
+            feed_dict[inputs[k]] = inputs_feed[k]
+
+        ops_value = sess.run(outputs, feed_dict=feed_dict)
+
+        rel_probs = None
+        rel_probs_flat = ops_value['rel_probs'][mi]
+        rel_probs = np.zeros([num_roi, num_roi, rel_probs_flat.shape[1]])
+        for i, rel in enumerate(relations):
+            rel_probs[rel[0], rel[1], :] = rel_probs_flat[i, :]
+
+        cls_probs = ops_value['cls_probs'][mi]
+
+        if bbox_reg:
+            # Apply bounding-box regression deltas
+            pred_boxes = bbox_transform_inv(boxes, ops_value['bbox_deltas'][mi])
+            pred_boxes = clip_boxes(pred_boxes, im.shape)
+        else:
+            # Simply repeat the boxes, once for each class
+            pred_boxes = np.tile(boxes, (1, cls_probs.shape[1]))
+
+        results.append({'scores': cls_probs, 'boxes': pred_boxes, 'relations': rel_probs})
+
+    print 'Scene takes', time.time() - t_start
+
+    return results
