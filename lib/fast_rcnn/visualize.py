@@ -160,7 +160,7 @@ def viz_net(net_name, weight_name, imdb, viz_mode='viz_cls'):
         draw_graph_pred(im, sg_entry['boxes'], sg_entry['scores'], sg_entry['relations'],
                              gt_to_pred, roidb[im_i])
 
-def load_model(sess, net_name, weight_name, num_classes, num_predicates):
+def load_model(net_name, num_classes, num_predicates):
     # set up testing mode
     rois = tf.placeholder(dtype=tf.float32, shape=[None, 5], name='rois')
     rel_rois = tf.placeholder(dtype=tf.float32, shape=[None, 5], name='rel_rois')
@@ -182,10 +182,9 @@ def load_model(sess, net_name, weight_name, num_classes, num_predicates):
 
     net = get_network(net_name)(inputs)
     net.setup()
-    print ('Loading model weights from {:s}').format(weight_name)
-    saver = tf.train.Saver()
-    saver.restore(sess, weight_name)
-
+    #print ('Loading model weights from {:s}').format(weight_name)
+    #saver = tf.train.Saver()
+    #saver.restore(sess, weight_name)
     return net, inputs
 
 def infer_image(im, box_proposals, relations, sess, net, inputs):
