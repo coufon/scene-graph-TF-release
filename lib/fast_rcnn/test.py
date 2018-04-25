@@ -340,15 +340,12 @@ def run_single(sess, net, inputs, outputs, im, boxes, relations, bbox_reg, multi
     return {'scores': cls_probs, 'boxes': pred_boxes, 'relations': rel_probs}
 
 
-def run_batch(sess, net, inputs, outputs, im, boxes, relations, bbox_reg, multi_iter):
-    batch_size = 2
-    ims = [im]*batch_size
-    batch_boxes = [boxes]*batch_size
-    batch_relations = [relations]*batch_size
+def run_batch(sess, net, inputs, outputs, ims, batch_boxes, batch_relations,
+      bbox_reg, multi_iter):
     mi = multi_iter[-1]
     results = list()
 
-    t_start = time.time()
+    #t_start = time.time()
     # Convert an image and RoIs within that image into network inputs.
     im_scaled_list, rois_list = list(), list()
     for im, boxes in zip(ims, batch_boxes):
@@ -361,9 +358,9 @@ def run_batch(sess, net, inputs, outputs, im, boxes, relations, bbox_reg, multi_
         inputs['ims']: np.stack(im_scaled_list, axis=0),
         net.keep_prob: 1,
     })
-    print 'VGG takes', time.time() - t_start
+    #print 'VGG takes', time.time() - t_start
 
-    t_start = time.time()
+    #t_start = time.time()
     for i in range(len(rois_list)):
         conv_out, rois, relations = np.expand_dims(conv_outs[i], axis=0), rois_list[i], batch_relations[i]
         relations = np.array(relations, dtype=np.int32) # all possible combinations
@@ -400,6 +397,6 @@ def run_batch(sess, net, inputs, outputs, im, boxes, relations, bbox_reg, multi_
 
         results.append({'scores': cls_probs, 'boxes': pred_boxes, 'relations': rel_probs})
 
-    print 'Scene takes', time.time() - t_start
+    #print 'Scene takes', time.time() - t_start
 
     return results
